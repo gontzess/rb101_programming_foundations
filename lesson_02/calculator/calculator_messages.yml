@@ -36,7 +36,7 @@ es:
   first_number: "¿Cuál es el primer número?"
   second_number: "¿Cuál es el segundo número?"
   invalid_operator: "Debe elegir 1, 2, 3 o 4."
-  invalid_operator_divide_by_zero: "Cannot divide by zero. Must choose 1, 2, or 3."
+  invalid_operator_divide_by_zero: "No se puede dividir por cero. Debe elegir 1, 2 o 3."
   operation_verb_1: "Sumando los dos números..."
   operation_verb_2: "Restando los dos números..."
   operation_verb_3: "Multiplicando los dos números..."
