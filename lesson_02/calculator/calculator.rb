@@ -9,13 +9,17 @@ def messages(message, lang='en')
   MESSAGES[lang][message]
 end
 
-def prompt(key, string=nil)
+def display(key, string=nil)
   message = messages(key, LANGUAGE)
   if string.nil?
     Kernel.puts("=> #{message}")
   else
     Kernel.puts("=> #{message} #{string}")
   end
+end
+
+def clear_screen
+  (system 'clear') || (system 'cls')
 end
 
 def integer?(num)
@@ -30,61 +34,75 @@ def valid_number?(num)
   integer?(num) || float?(num)
 end
 
+def divide_by_zero?(number2, operator)
+  (number2.to_f() == 0.0) && (operator == '4')
+end
+
 def operation_to_verb(op)
   verb = 'operation_verb_' + op
   # x = "blah blah"
   verb
 end
 
-prompt('welcome')
-
-name = ''
-loop do
-  name = Kernel.gets().chomp()
-
-  if name.empty?()
-    prompt('valid_name')
-  else
-    break
-  end
+def display_calculating(operator)
+  operating_verb = operation_to_verb(operator)
+  display(operating_verb)
 end
 
-prompt('hello', name)
+def get_name
+  name = ''
+  loop do
+    name = Kernel.gets().chomp().strip()
 
-loop do # main loop
+    name.empty?() ? display('invalid_name') : break
+  end
+  name
+end
+
+def get_first_num
   number1 = ''
   loop do
-    prompt('first_number')
+    display('first_number')
     number1 = Kernel.gets().chomp()
 
     break if valid_number?(number1)
 
-    prompt('valid_number')
+    display('invalid_number')
   end
+  number1
+end
 
+def get_second_num
   number2 = ''
   loop do
-    prompt('second_number')
+    display('second_number')
     number2 = Kernel.gets().chomp()
 
     break if valid_number?(number2)
 
-    prompt('valid_number')
+    display('invalid_number')
   end
+  number2
+end
 
-  prompt('operator_prompt')
+def get_operator(number2)
+  display('operator_options')
 
   operator = ''
   loop do
     operator = Kernel.gets().chomp()
 
-    break if %w(1 2 3 4).include?(operator)
+    break if %w(1 2 3 4).include?(operator) &&
+      !divide_by_zero?(number2, operator)
 
-    prompt('valid_operator')
+    divide_by_zero?(number2, operator) ?
+      display('invalid_operator_divide_by_zero') :
+      display('invalid_operator')
   end
+  operator
+end
 
-  prompt(operation_to_verb(operator))
-
+def perform_calculation(number1, number2, operator)
   result = case operator
            when '1'
              number1.to_f() + number2.to_f()
@@ -95,12 +113,41 @@ loop do # main loop
            when '4'
              number1.to_f() / number2.to_f()
            end
-
-  prompt('result_summary', result.to_s)
-
-  prompt('repeat_calc')
-  answer = Kernel.gets().chomp()
-  break unless answer.downcase().start_with?('y')
 end
 
-prompt('thank_you')
+def another_calculation?
+  answer = ''
+  loop do
+    display('repeat_calc')
+    answer = Kernel.gets().chomp().downcase()
+
+    break if %w(y n).include?(answer)
+
+    display('invalid_repeat_calc')
+  end
+  answer == 'y'
+end
+
+
+# main calculator
+
+clear_screen
+
+display('welcome')
+
+name = get_name
+display('hello', name)
+
+loop do
+  number1 = get_first_num
+  number2 = get_second_num
+  operator = get_operator(number2)
+  display_calculating(operator)
+
+  result = perform_calculation(number1, number2, operator).to_s
+  display('result_summary', result)
+
+  break unless another_calculation?
+end
+
+display('thank_you')
