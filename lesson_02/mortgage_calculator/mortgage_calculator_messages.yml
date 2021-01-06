@@ -6,5 +6,10 @@ invalid_loan_amount: "Invalid loan amount, please enter a positive number."
 invalid_annual_percentage_rate: "Invalid APR, please enter a positive % rate."
 invalid_loan_years: "Invalid number of years, please enter a positive number."
 calculating: "Calculating..."
-loan_summary: "Monthly payment is"
-repeat_calc: "Would you like to run another calculation? (Y to run again)"
+result_summary: "Monthly payment is"
+repeat_calc: "Would you like to run another calculation? (y/n)"
+invalid_repeat_calc: "Make sure to enter y for yes or n for no."
+thank_you: |
+  Good luck paying off your mortgage.
+  Thank you for using the mortgage calculator.
+  Good bye!
