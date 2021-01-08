@@ -78,8 +78,12 @@ end
 def calculate_monthly_payment(loan_amount,
                               monthly_interest_rate_decimal,
                               loan_months)
-  loan_amount * (monthly_interest_rate_decimal / (1 - (1 +
+  if monthly_interest_rate_decimal == 0.0
+    loan_amount / loan_months
+  else
+    loan_amount * (monthly_interest_rate_decimal / (1 - (1 +
                 monthly_interest_rate_decimal)**(-loan_months)))
+  end
 end
 
 def format_to_dollars(num)
@@ -118,6 +122,7 @@ loop do # main loop
   display('result_summary', monthly_payment_dollars)
 
   break unless another_calculation?
+  clear_screen
 end
 
 display('thank_you')
