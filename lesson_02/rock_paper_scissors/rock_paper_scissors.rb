@@ -32,6 +32,7 @@ def get_user_choice
     all_valid_choices_shorthand = VALID_CHOICES_SHORTHAND.join(', ')
     display('choose_from_longhand', all_valid_choices_longhand)
     display('choose_from_shorthand', all_valid_choices_shorthand)
+
     user_choice = gets.chomp.downcase
 
     if VALID_CHOICES_SHORTHAND.include?(user_choice)
@@ -53,13 +54,31 @@ def win?(first, second)
   WINNER_COMBOS[first].include?(second)
 end
 
-def game_results(user, computer)
+def determine_game_results(user, computer)
   if win?(user, computer)
     'user_wins'
   elsif win?(computer, user)
     'computer_wins'
   else
     'tie'
+  end
+end
+
+def count_score(scoreboard_ary)
+  scoreboard_ary.count('user_wins').to_s + ' to ' +
+    scoreboard_ary.count('computer_wins').to_s
+end
+
+def reached_five_wins?(scoreboard_ary)
+  (scoreboard_ary.count('user_wins') >= 5) ||
+    (scoreboard_ary.count('computer_wins') >= 5)
+end
+
+def determine_grand_winner(scoreboard_ary)
+  if scoreboard_ary.count('user_wins') >= 5
+    'user_grand_winner'
+  else
+    'computer_grand_winner'
   end
 end
 
@@ -78,6 +97,7 @@ end
 
 ## Main Loop
 clear_screen
+scoreboard = []
 
 display('welcome')
 
@@ -88,7 +108,18 @@ loop do
   display('user_chose', user_choice)
   display('computer_chose', computer_choice)
 
-  display(game_results(user_choice, computer_choice))
+  game_results = determine_game_results(user_choice, computer_choice)
+  scoreboard << game_results
+  score = count_score(scoreboard)
+
+  display(game_results)
+  display('score_announcement', score)
+
+  if reached_five_wins?(scoreboard)
+    grand_winner = determine_grand_winner(scoreboard)
+    display(grand_winner)
+    break
+  end
 
   break unless another_game?
   clear_screen
