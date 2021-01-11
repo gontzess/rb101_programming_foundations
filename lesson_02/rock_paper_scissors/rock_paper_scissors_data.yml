@@ -28,7 +28,8 @@ winner_combos:
     - spock
     - paper
 messages:
-  welcome: "Hi there, welcome to the game."
+  welcome: "Welcome to Rock, Paper, Scissors, Spock, Lizard..."
+  match_rules: "To become the match Grand Winner be the first to win"
   choose_from_longhand: "Choose one of the following:"
   choose_from_shorthand: "Or you may choose in shorthand:"
   invalid_choice: "That's not a valid choice."
@@ -37,7 +38,7 @@ messages:
   user_wins: "You won!"
   computer_wins: "Computer won!"
   tie: "It's a tie!"
-  score_announcement: "The score is:"
+  score_announcement: "The match score is:"
   repeat_game: "Do you want to play again? (y/n)"
   invalid_repeat_game: "Make sure to enter y for yes or n for no."
   user_grand_winner: "You are the grand winner!"

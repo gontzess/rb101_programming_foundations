@@ -7,6 +7,8 @@ VALID_CHOICES_SHORTHAND = DATA['valid_choices']['shorthand']
 WINNER_COMBOS = DATA['winner_combos']
 MESSAGES = DATA['messages']
 
+MAX_GAME_WINS = 5
+
 def clear_screen
   (system 'clear') || (system 'cls')
 end
@@ -20,6 +22,13 @@ def display(key, string=nil)
   end
 end
 
+def display_user_options
+  all_valid_choices_longhand = VALID_CHOICES_LONGHAND.join(', ')
+  all_valid_choices_shorthand = VALID_CHOICES_SHORTHAND.join(', ')
+  display('choose_from_longhand', all_valid_choices_longhand)
+  display('choose_from_shorthand', all_valid_choices_shorthand)
+end
+
 def to_longhand(choice)
   index = VALID_CHOICES_SHORTHAND.index(choice)
   VALID_CHOICES_LONGHAND[index]
@@ -28,11 +37,7 @@ end
 def get_user_choice
   user_choice = ''
   loop do
-    all_valid_choices_longhand = VALID_CHOICES_LONGHAND.join(', ')
-    all_valid_choices_shorthand = VALID_CHOICES_SHORTHAND.join(', ')
-    display('choose_from_longhand', all_valid_choices_longhand)
-    display('choose_from_shorthand', all_valid_choices_shorthand)
-
+    display_user_options
     user_choice = gets.chomp.downcase
 
     if VALID_CHOICES_SHORTHAND.include?(user_choice)
@@ -69,13 +74,13 @@ def count_score(scoreboard_ary)
     scoreboard_ary.count('computer_wins').to_s
 end
 
-def reached_five_wins?(scoreboard_ary)
-  (scoreboard_ary.count('user_wins') >= 5) ||
-    (scoreboard_ary.count('computer_wins') >= 5)
+def match_won?(scoreboard_ary)
+  (scoreboard_ary.count('user_wins') >= MAX_GAME_WINS) ||
+    (scoreboard_ary.count('computer_wins') >= MAX_GAME_WINS)
 end
 
 def determine_grand_winner(scoreboard_ary)
-  if scoreboard_ary.count('user_wins') >= 5
+  if scoreboard_ary.count('user_wins') >= MAX_GAME_WINS
     'user_grand_winner'
   else
     'computer_grand_winner'
@@ -100,6 +105,7 @@ clear_screen
 scoreboard = []
 
 display('welcome')
+display('match_rules', MAX_GAME_WINS)
 
 loop do
   user_choice = get_user_choice
@@ -110,12 +116,12 @@ loop do
 
   game_results = determine_game_results(user_choice, computer_choice)
   scoreboard << game_results
-  score = count_score(scoreboard)
+  match_score = count_score(scoreboard)
 
   display(game_results)
-  display('score_announcement', score)
+  display('score_announcement', match_score)
 
-  if reached_five_wins?(scoreboard)
+  if match_won?(scoreboard)
     grand_winner = determine_grand_winner(scoreboard)
     display(grand_winner)
     break
