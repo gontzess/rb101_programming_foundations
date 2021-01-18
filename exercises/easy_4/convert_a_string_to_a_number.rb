@@ -18,15 +18,12 @@ def string_to_integer(str)
 end
 
 def hexadecimal_to_integer(str)
-  digit_values = []
   sum = 0
-  str.chars.each_with_index do |char, idx|  ## TRY WITH INJECT
-    if idx == (str.length - 1) || idx == 0
-      sum += HEX_DIGITS[char]
-    #elsif idx == 0
-      #sum = HEX_DIGITS[char]
+  str.chars.each_with_index do |char, idx|
+    if idx == 0
+      sum = HEX_DIGITS[char.upcase]
     else
-      sum = (sum * 16) + HEX_DIGITS[char]
+      sum = (sum * 16) + HEX_DIGITS[char.upcase]
     end
   end
   sum
@@ -35,7 +32,5 @@ end
 puts string_to_integer('4321') == 4321
 puts string_to_integer('570') == 570
 
-puts string_to_integer('4321')
-puts string_to_integer('570')
-
 puts hexadecimal_to_integer('4D9f') == 19871
+puts hexadecimal_to_integer('3425') == 13349
