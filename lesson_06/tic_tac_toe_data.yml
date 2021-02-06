@@ -1,0 +1,12 @@
+message:
+  welcome: "Welcome to the Tic Tac Toe game!"
+  game_rules_p1: "You will be playing up against the computer. The first to"
+  game_rules_p2: "wins all!"
+  score_announcement: "The game score is"
+  choose_square: "Choose a square:"
+  invalid_choice: "That's not a valid choice."
+  wins_round: "wins this round!"
+  tie_round: "This round is a tie!"
+  next_round: "Continue to the next round? (y or n)"
+  wins_game: "wins the game!"
+  thank_you: "Thank you for playing... and remember, no sore losers!"
