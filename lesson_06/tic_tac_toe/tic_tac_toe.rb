@@ -7,7 +7,8 @@ DATA = YAML.load_file('tic_tac_toe_data.yml')
 MESSAGE = DATA['message']
 INFINITY = Float::INFINITY
 
-## method definitions
+## METHOD DEFINITIONS
+# rubocop:disable Style/EmptyCaseCondition
 def prompt(msg1, msg2='', msg3='')
   case
   when msg3 == '' && msg2 == ''
@@ -21,6 +22,7 @@ def prompt(msg1, msg2='', msg3='')
     puts "=> #{msg1} #{msg2} #{msg3}"
   end
 end
+# rubocop:enable Style/EmptyCaseCondition
 
 def clear_screen
   (system 'clear') || (system 'cls')
@@ -45,7 +47,7 @@ end
 # rubocop:enable Metrics/AbcSize
 
 def display_board(brd)
-  # clear_screen
+  clear_screen
   puts "You (Player) are #{PLAYER_MARKER}s. Computer is #{COMPUTER_MARKER}s."
   puts ""
   display_rows(brd)
@@ -90,8 +92,9 @@ end
 def winning_lines(dimension)
   winning_rows = winning_rows(dimension)
   winning_columns = winning_columns(dimension)
-  winning_diagonals = winning_diagonals(dimension, winning_rows, winning_columns)
-  return winning_rows + winning_columns + winning_diagonals
+  winning_diagonals = winning_diagonals(dimension, winning_rows,
+                                        winning_columns)
+  winning_rows + winning_columns + winning_diagonals
 end
 
 def initialize_scoreboard
@@ -164,12 +167,13 @@ def center_square
 end
 
 # rubocop:disable Metrics/CyclomaticComplexity
-def find_at_risk_squares(brd, marker)
+def find_at_risk_squares(brd, marker, depth=1)
   at_risk = []
+  depth = 1 if BOARD_SIZE == 3 # if board is 3x3, should always do depth of 1
   WINNING_LINES.each do |line|
     squares = brd.values_at(*line)
-    if squares.count(marker) == BOARD_SIZE - 1 &&
-       squares.count(INITIAL_MARKER) == 1
+    if squares.count(marker) == BOARD_SIZE - depth &&
+       squares.count(INITIAL_MARKER) == depth
       line.each do |square|
         at_risk << square if brd[square] == INITIAL_MARKER
       end
@@ -181,35 +185,47 @@ def find_at_risk_squares(brd, marker)
 end
 # rubocop:enable Metrics/CyclomaticComplexity
 
+# rubocop:disable Style/EmptyCaseCondition
 def find_competitive_square(brd)
   immediate_wins = find_at_risk_squares(brd, COMPUTER_MARKER)
   immediate_threats = find_at_risk_squares(brd, PLAYER_MARKER)
+  # p immediate_wins  # for testing output
+  # p immediate_threats  # for testing output
   center = center_square
-  p immediate_wins
-  p immediate_threats
+  if BOARD_SIZE > 3
+    look_ahead_wins = find_at_risk_squares(brd, COMPUTER_MARKER, 2)
+    look_ahead_threats = find_at_risk_squares(brd, PLAYER_MARKER, 2)
+    # p look_ahead_wins  # for testing output
+    # p look_ahead_threats  # for testing output
+  end
 
   case
-  when !!immediate_wins               then immediate_wins.first
-  when !!immediate_threats            then immediate_threats.first
-  when brd[center] == INITIAL_MARKER  then center
-  else                                empty_squares(brd).sample
+  when !!immediate_wins                       then immediate_wins.first
+  when !!immediate_threats                    then immediate_threats.first
+  when brd[center] == INITIAL_MARKER          then center
+  when BOARD_SIZE > 3 && !!look_ahead_wins    then look_ahead_wins.first
+  when BOARD_SIZE > 3 && !!look_ahead_threats then look_ahead_threats.first
+  else                                             empty_squares(brd).sample
   end
 end
+# rubocop:enable Style/EmptyCaseCondition
 
+# rubocop:disable Style/EmptyCaseCondition
 def check_for_terminal_node(brd)
   certain_win = detect_round_winner(brd, true) == 1
   certain_loss = !!find_at_risk_squares(brd, PLAYER_MARKER)
-  certain_tie = empty_squares(brd).empty?
+  certain_tie = draw_round?(brd)
 
   terminal_node = certain_tie || certain_win || certain_loss
   node_value = case
-               when certain_win then 100
-               when certain_loss then -100
-               when certain_tie then 0
-               else empty_squares(brd).length
+               when certain_win   then 100
+               when certain_loss  then -100
+               when certain_tie   then 0
+               else               empty_squares(brd).length
                end
   return terminal_node, node_value
 end
+# rubocop:enable Style/EmptyCaseCondition
 
 def negamax(square, brd, depth, side=1)
   brd_copy = copy_of_board_state(brd)
@@ -228,17 +244,17 @@ def negamax(square, brd, depth, side=1)
     value = [value, -negamax(sq, brd_copy, (depth - 1), -side)].max
   end
 
-  return value
+  value
 end
 
 def find_negamax_square(brd, depth=PLIES, side=1)
   empty_squares = empty_squares(brd)
   return center_square if brd[center_square] == INITIAL_MARKER
-  return find_competitive_square(brd) if empty_squares.length > 12
+  return find_competitive_square(brd) if empty_squares.length > 9
 
   empty_squares.max_by do |square|
     negamax_value = negamax(square, brd, depth, side)
-    puts "#{square}: #{negamax_value}"
+    # puts "#{square}: #{negamax_value}"  # for testing output
     negamax_value
   end
 end
@@ -260,24 +276,26 @@ def minimax(square, brd, depth, side=1)
     empty_squares(brd_copy).each do |sq|
       value = [value, minimax(sq, brd_copy, (depth - 1), -side)].max
     end
-    return value
+
+    value
   when -1 # Player aka minimizing player
     value = INFINITY
     empty_squares(brd_copy).each do |sq|
       value = [value, minimax(sq, brd_copy, (depth - 1), -side)].min
     end
-    return value
+
+    value
   end
 end
 
 def find_minimax_square(brd, depth=PLIES, side=1)
   empty_squares = empty_squares(brd)
   return center_square if brd[center_square] == INITIAL_MARKER
-  return find_competitive_square(brd) if empty_squares.length > 12
+  return find_competitive_square(brd) if empty_squares.length > 9
 
   empty_squares.max_by do |square|
     minimax_value = minimax(square, brd, depth, side)
-    puts "#{square}: #{minimax_value}"
+    # puts "#{square}: #{minimax_value}"  # for testing output
     minimax_value
   end
 end
@@ -299,7 +317,7 @@ def computer_places_piece!(brd)
                 when 'impossible1' then find_negamax_square(brd)
                 when 'impossible2' then find_minimax_square(brd)
                 end
-  p best_square
+  # p best_square  # for testing output
   brd[best_square] = COMPUTER_MARKER
 end
 
@@ -319,13 +337,21 @@ end
 
 def detect_round_winner(brd, output_as_num=false)
   WINNING_LINES.each do |line|
-    if brd.values_at(*line).count(PLAYER_MARKER) == BOARD_SIZE
+    squares = brd.values_at(*line)
+    if squares.count(PLAYER_MARKER) == BOARD_SIZE
       return output_as_num ? -1 : "Player"
-    elsif brd.values_at(*line).count(COMPUTER_MARKER) == BOARD_SIZE
+    elsif squares.count(COMPUTER_MARKER) == BOARD_SIZE
       return output_as_num ? 1 : "Computer"
     end
   end
   nil
+end
+
+def draw_round?(brd)
+  WINNING_LINES.all? do |line|
+    squares = brd.values_at(*line)
+    squares.include?(PLAYER_MARKER) && squares.include?(COMPUTER_MARKER)
+  end
 end
 
 def update_scoreboard!(scoreboard_hsh, player)
@@ -357,18 +383,20 @@ def get_game_winner(scoreboard_hsh)
 end
 
 ## GAME CONFIGURATIONS
-# adjustable settings:
-BOARD_SIZE = 3 # ADJUSTABLE, ex: 3 or 5
-ROUNDS_TO_WIN = 5 # ADJUSTABLE
-USER_CHOOSES_FIRST_MOVE = false # ADJUSTABLE, options: true, false
-FIRST_MOVE = 'Alternate' # ADJUSTABLE, options: 'Player', 'Computer', or 'Alternate'
-DIFFICULTY = 'impossible1' # ADJUSTABLE, options: 'competitive', 'impossible1', 'impossible2'
+## adjustable settings:
+BOARD_SIZE = 5                    # ADJUSTABLE, ex: 3 or 5
+ROUNDS_TO_WIN = 5                 # ADJUSTABLE
+USER_CHOOSES_FIRST_MOVE = false   # ADJUSTABLE, options: true, false
+FIRST_MOVE = 'Alternate'          # ADJUSTABLE, options: 'Player', 'Computer',
+                                  #   or 'Alternate'
+DIFFICULTY = 'impossible2'        # ADJUSTABLE, options: 'competitive',
+                                  #   'impossible1', 'impossible2'
 
-# not adjustable:
-PLIES = case BOARD_SIZE # recommended plies
+## not adjustable:
+PLIES = case BOARD_SIZE # recommended max plies
         when 3 then 10
-        when 5 then 5
-        else        2
+        when 5 then 10
+        else        3
         end
 MAX_TURNS = BOARD_SIZE**2
 WINNING_LINES = winning_lines(BOARD_SIZE)
@@ -377,8 +405,7 @@ PLAYER_MARKER = 'X'
 COMPUTER_MARKER = 'O'
 NUMBER_OF_PLAYERS = 2
 
-
-## main program
+## MAIN PROGRAM
 prompt(MESSAGE['welcome'])
 prompt(MESSAGE['game_rules_p1'], ROUNDS_TO_WIN, MESSAGE['game_rules_p2'])
 
@@ -396,7 +423,7 @@ loop do
     player = round_turn_sequence[player_idx]
 
     place_piece!(board, player)
-    break if someone_won_round?(board) || board_full?(board)
+    break if someone_won_round?(board) || draw_round?(board)
   end
 
   display_board(board)
