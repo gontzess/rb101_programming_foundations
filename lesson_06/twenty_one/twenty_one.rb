@@ -18,8 +18,10 @@ CARDS = (1..52).each_with_object({}) do |card_id, hash|
                              value: CARD_VALUES[(card_id % 13) - 1],
                              suit: CARD_SUITS[(card_id - 1) / 13] }
         end
+ROUNDS_TO_WIN = 3
 # NUMBER_OF_PLAYERS = 2
 
+## METHOD DEFINITIONS
 def clear_screen
   (system 'clear') || (system 'cls')
 end
@@ -47,6 +49,14 @@ def joinor(ary, divider=', ', ending='and')
   end
 end
 
+def initialize_deck
+  (1..52).to_a.shuffle
+end
+
+def initialize_table
+  { Player: [], Dealer:[], deck: initialize_deck }
+end
+
 def initialize_scoreboard
   { round_score: { Player: 0, Dealer: 0 },
     round: 1,
@@ -59,19 +69,89 @@ def reset_round_score!(scoreboard)
   scoreboard[:round_score] = { Player: 0, Dealer: 0 }
 end
 
-def initialize_deck
-  (1..52).to_a.shuffle
+def update_round_score!(table, scoreboard)
+  scoreboard[:round_score] = { Player: smart_sum_of_hand(table, 'Player'),
+                               Dealer: smart_sum_of_hand(table, 'Dealer') }
 end
 
-def initialize_table
-  { Player: [], Dealer:[], deck: initialize_deck }
+def update_round_results!(scoreboard, round_winner)
+  return nil unless %w(Player Dealer tie).include?(round_winner)
+
+  if round_winner == 'tie'
+    scoreboard[:round] += 1
+  else  # i.e. Player or Dealer won
+    scoreboard[:round] += 1
+    scoreboard[:game_score][round_winner.to_sym] += 1
+
+    if scoreboard[:game_score][round_winner.to_sym] >= ROUNDS_TO_WIN
+      scoreboard[:game_complete] = true
+      scoreboard[:game_winner] = round_winner
+    end
+  end
+
+  reset_round_score!(scoreboard)
 end
 
-def deal_round!(table)
+def bust?(sum)
+  sum > 21
+end
+
+def player_bust?(scoreboard, player)  ## CONSOLIDATE
+  scoreboard[:round_score][player.to_sym] > 21
+end
+
+def raw_sum_of_hand(table, player)
+  aces = 0
+  raw_sum = if table[player.to_sym].empty?
+              0
+            else
+              table[player.to_sym].inject(0) do |total, card_idx|
+                if CARDS[card_idx][:name] == 'Ace'
+                  aces +=1
+                  total + CARDS[card_idx][:value][0]
+                else
+                  total + CARDS[card_idx][:value]
+                end
+              end
+            end
+  return raw_sum, aces
+end
+
+def smart_sum_of_hand(table, player)
+  raw_sum, aces = raw_sum_of_hand(table, player)
+
+  loop do
+    return raw_sum if aces == 0 || !bust?(raw_sum)
+
+    raw_sum -= 10
+    aces -= 1
+  end
+end
+
+# def determine_round_winner_OLD(scoreboard)
+#   winner = scoreboard[:round_score].keys.max_by do |player|
+#              scoreboard[:round_score][player]
+#            end
+#   winner.to_s
+# end
+
+def determine_round_winner(scoreboard)
+  result = scoreboard[:round_score][:Player] <=>
+           scoreboard[:round_score][:Dealer]
+  case result
+  when -1 then 'Dealer'
+  when 1  then 'Player'
+  when 0  then 'tie'
+  else         'ERROR'
+  end
+end
+
+def deal_first_round!(table, scoreboard)
   2.times do
     table[:Player] << table[:deck].shift
     table[:Dealer] << table[:deck].shift
   end
+  update_round_score!(table, scoreboard)
 end
 
 def convert_card_ids(ary_card_ids, output_key)  # accepts output_key = 'name', 'value', or 'suit'
@@ -82,116 +162,119 @@ def convert_card_ids(ary_card_ids, output_key)  # accepts output_key = 'name', '
   end
 end
 
-def bust?(player_sum)
-  player_sum > 21
-end
-
-def raw_sum_of_hand(table, player)
-  aces = 0
-  raw_sum = table[player.to_sym].inject(0) |total, card_idx|
-              if CARD[card_idx][name] == 'Ace'
-                aces +=1
-                total + CARD[card_idx][value][0]
-              else
-                total + CARD[card_idx][value]
-              end
-            end
-  return raw_sum, aces
-end
-
-def smart_sum_of_hand(table, player)
-  raw_sum, aces = raw_sum_of_hand(table, player)
-
-  return raw_sum if aces == 0 || !bust?(player)
-
-  if aces > 0
-    raw_sum -= 10
-    aces -= 1
-  end
-
-  return raw_sum if aces == 0 || !bust?(player)
-
-  if aces > 0
-    raw_sum -= 10
-    aces -= 1
-  end
-
-  return raw_sum if aces == 0 || !bust?(player)
-
-  ## MAKE THIS RECURSIVE...
-end
-
-
-
-def display_table(table)
+def display_table(table, player='both')  # accepts player = 'both', 'Player', or 'Dealer'
   dealer_cards = ['unknown card'] + convert_card_ids(table[:Dealer][1..-1], 'name')
   player_cards = convert_card_ids(table[:Player], 'name')
-  prompt('Dealer has:', joinor(dealer_cards))
-  prompt('You have:', joinor(player_cards))
+
+  case player
+  when 'both'
+    prompt('Dealer has:', joinor(dealer_cards))
+    # prompt('pssstt.. secret card is:', convert_card_ids(table[:Dealer], 'name').first)  # remove later
+    p smart_sum_of_hand(table, 'Dealer')  # remove later
+    prompt('You have:', joinor(player_cards))
+    p smart_sum_of_hand(table, 'Player')  # remove later
+  when 'Player'
+    prompt('You have:', joinor(player_cards))
+    p smart_sum_of_hand(table, 'Player')  # remove later
+  when 'Dealer'
+    prompt('Dealer has:', joinor(dealer_cards))
+    p smart_sum_of_hand(table, 'Dealer')  # remove later
+  else
+    prompt('ERROR')
+  end
 end
 
-table = initialize_table
-p table
-deal_round!(table)
-p table
-display_table(table)
+def hit!(table, player)
+  table[player.to_sym] << table[:deck].shift
+  return nil
+end
 
-deal_round!(table)
-p table
-display_table(table)
+def computer_hit?(scoreboard)
+  scoreboard[:round_score][:Dealer] < 17
+end
 
+def player_turn!(table, scoreboard)
+  loop do
+    answer = ''
+    prompt('Your turn: hit or stay? (h/s)')
 
+    loop do
+      answer = gets.chomp.downcase
+      break if %w(h s).include?(answer)
+      prompt("That's not a valid choice.")
+    end
 
-##
-# {1=>{:name=>"2", :value=>2, :suit=>"Hearts"},
-# 2=>{:name=>"3", :value=>3, :suit=>"Hearts"},
-# 3=>{:name=>"4", :value=>4, :suit=>"Hearts"},
-# 4=>{:name=>"5", :value=>5, :suit=>"Hearts"},
-# 5=>{:name=>"6", :value=>6, :suit=>"Hearts"},
-# 6=>{:name=>"7", :value=>7, :suit=>"Hearts"},
-# 7=>{:name=>"8", :value=>8, :suit=>"Hearts"},
-# 8=>{:name=>"9", :value=>9, :suit=>"Hearts"},
-# 9=>{:name=>"10", :value=>10, :suit=>"Hearts"},
-# 10=>{:name=>"Jack", :value=>10, :suit=>"Hearts"},
-# 11=>{:name=>"Queen", :value=>10, :suit=>"Hearts"},
-# 12=>{:name=>"King", :value=>10, :suit=>"Hearts"},
-# 13=>{:name=>"Ace", :value=>[11, 1], :suit=>"Hearts"},
-# 14=>{:name=>"2", :value=>2, :suit=>"Diamonds"},
-# 15=>{:name=>"3", :value=>3, :suit=>"Diamonds"},
-# 16=>{:name=>"4", :value=>4, :suit=>"Diamonds"},
-# 17=>{:name=>"5", :value=>5, :suit=>"Diamonds"},
-# 18=>{:name=>"6", :value=>6, :suit=>"Diamonds"},
-# 19=>{:name=>"7", :value=>7, :suit=>"Diamonds"},
-# 20=>{:name=>"8", :value=>8, :suit=>"Diamonds"},
-# 21=>{:name=>"9", :value=>9, :suit=>"Diamonds"},
-# 22=>{:name=>"10", :value=>10, :suit=>"Diamonds"},
-# 23=>{:name=>"Jack", :value=>10, :suit=>"Diamonds"},
-# 24=>{:name=>"Queen", :value=>10, :suit=>"Diamonds"},
-# 25=>{:name=>"King", :value=>10, :suit=>"Diamonds"},
-# 26=>{:name=>"Ace", :value=>[11, 1], :suit=>"Diamonds"},
-# 27=>{:name=>"2", :value=>2, :suit=>"Clubs"},
-# 28=>{:name=>"3", :value=>3, :suit=>"Clubs"},
-# 29=>{:name=>"4", :value=>4, :suit=>"Clubs"},
-# 30=>{:name=>"5", :value=>5, :suit=>"Clubs"},
-# 31=>{:name=>"6", :value=>6, :suit=>"Clubs"},
-# 32=>{:name=>"7", :value=>7, :suit=>"Clubs"},
-# 33=>{:name=>"8", :value=>8, :suit=>"Clubs"},
-# 34=>{:name=>"9", :value=>9, :suit=>"Clubs"},
-# 35=>{:name=>"10", :value=>10, :suit=>"Clubs"},
-# 36=>{:name=>"Jack", :value=>10, :suit=>"Clubs"},
-# 37=>{:name=>"Queen", :value=>10, :suit=>"Clubs"},
-# 38=>{:name=>"King", :value=>10, :suit=>"Clubs"},
-# 39=>{:name=>"Ace", :value=>[11, 1], :suit=>"Clubs"},
-# 40=>{:name=>"2", :value=>2, :suit=>"Spades"},
-# 41=>{:name=>"3", :value=>3, :suit=>"Spades"},
-# 42=>{:name=>"4", :value=>4, :suit=>"Spades"},
-# 43=>{:name=>"5", :value=>5, :suit=>"Spades"},
-# 44=>{:name=>"6", :value=>6, :suit=>"Spades"},
-# 45=>{:name=>"7", :value=>7, :suit=>"Spades"},
-# 46=>{:name=>"8", :value=>8, :suit=>"Spades"},
-# 47=>{:name=>"9", :value=>9, :suit=>"Spades"},
-# 48=>{:name=>"10", :value=>10, :suit=>"Spades"},
-# 49=>{:name=>"Jack", :value=>10, :suit=>"Spades"},
-# 50=>{:name=>"Queen", :value=>10, :suit=>"Spades"},
-# 51=>{:name=>"King", :value=>10, :suit=>"Spades"},
-# 52=>{:name=>"Ace", :value=>[11, 1], :suit=>"Spades"}}
+    break if answer == 's'
+
+    hit!(table, 'Player')
+    update_round_score!(table, scoreboard)
+    display_table(table, 'Player')
+
+    break if player_bust?(scoreboard, 'Player')
+  end
+end
+
+def dealer_turn!(table, scoreboard)
+  loop do
+    if computer_hit?(scoreboard)
+      hit!(table, 'Dealer')
+      update_round_score!(table, scoreboard)
+      prompt('Dealer hits!')
+      display_table(table, 'Dealer')
+    else
+      prompt('Dealer stays!')
+      break
+    end
+    break if player_bust?(scoreboard, 'Dealer')
+  end
+end
+
+def play_again?
+  answer = ''
+  loop do
+    prompt('Another round? (y/n)')
+    answer = gets.chomp.downcase
+    break if %w(y n).include?(answer)
+    prompt("That's not a valid choice.")
+  end
+  answer == 'y'
+end
+
+## MAIN PROGRAM
+clear_screen
+scoreboard = initialize_scoreboard
+prompt('Welcome!')
+
+loop do
+  table = initialize_table
+  deal_first_round!(table, scoreboard)
+  display_table(table)
+
+  player_turn!(table, scoreboard)
+
+  if player_bust?(scoreboard, 'Player')
+    round_winner = 'Dealer'
+    prompt('Ya BUST! Dealer wins!')
+  else
+    dealer_turn!(table, scoreboard)
+
+    if player_bust?(scoreboard, 'Dealer')
+      round_winner = 'Player'
+      prompt('The dealer busts.. you win.')
+    else
+      round_winner = determine_round_winner(scoreboard)
+      case round_winner
+      when 'Player' then prompt('You win.. this time..')
+      when 'Dealer' then prompt('You LOSE! Dealer wins!')
+      else               prompt("It's a tie.")
+      end
+    end
+  end
+
+  update_round_results!(scoreboard, round_winner)
+
+  break if !play_again?
+  clear_screen
+end
+
+prompt('Goodbye!')
