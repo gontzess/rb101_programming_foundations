@@ -159,18 +159,23 @@ def dealer_hit?(table)
   table[:total][:Dealer] < table[:total][:Player]
 end
 
+def get_player_move
+  answer = ''
+  prompt("Hit or stay? (h/s)")
+
+  loop do
+    answer = gets.chomp.downcase
+    break if %w(h s).include?(answer)
+    prompt("That's not a valid choice.")
+  end
+  answer
+end
+
 def player_turn!(table)
   puts ''
   prompt("Your turn...")
   loop do
-    answer = ''
-    prompt("Hit or stay? (h/s)")
-
-    loop do
-      answer = gets.chomp.downcase
-      break if %w(h s).include?(answer)
-      prompt("That's not a valid choice.")
-    end
+    answer = get_player_move
 
     if answer == 's'
       prompt("You stayed at #{table[:total][:Player]}.")
@@ -258,7 +263,7 @@ def display_round_results(table, round_winner, busted)
   end
 end
 
-def game_score(scoreboard)
+def get_game_score(scoreboard)
   score = []
   scoreboard[:game_score].each do |player, wins|
     name = player == :Player ? 'You' : player
@@ -269,15 +274,15 @@ end
 
 def display_game_score(scoreboard)
   puts ''
-  prompt("The score is #{game_score(scoreboard)}")
+  prompt("The score is #{get_game_score(scoreboard)}")
 end
 
-def determine_game_winner(scoreboard)
+def get_game_winner(scoreboard)
   scoreboard[:game_winner]
 end
 
 def game_won?(scoreboard)
-  !!determine_game_winner(scoreboard)
+  !!get_game_winner(scoreboard)
 end
 
 def display_game_results(game_winner)
@@ -335,7 +340,7 @@ loop do
 end
 
 if game_won?(scoreboard)
-  game_winner = determine_game_winner(scoreboard)
+  game_winner = get_game_winner(scoreboard)
   display_game_results(game_winner)
 end
 
